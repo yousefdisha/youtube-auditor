@@ -317,4 +317,3 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
             </div>
         """, unsafe_allow_html=True)
 
-        channel_data, error_
