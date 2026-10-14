@@ -1,3 +1,4 @@
+
 import streamlit as st
 import requests
 import time
@@ -44,23 +45,21 @@ st.markdown("""
     }
     .input-label {
         color: #00ffcc;
-        font-size: 1.3rem;
-        font-weight: 900;
-        margin-bottom: 8px;
-        text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 6px;
     }
-    /* توضيح مربع إدخال الرابط */
+    /* تصغير مربع الإدخال ليرجع لطبيعته مع الحفاظ على وضوح الخط الأبيض */
     div[data-baseweb="input"] {
         background-color: #111827 !important;
-        border: 2px solid #00ffcc !important;
-        border-radius: 12px !important;
-        box-shadow: 0 0 12px rgba(0, 255, 204, 0.2) !important;
+        border: 1.5px solid #00ffcc !important;
+        border-radius: 8px !important;
     }
     div[data-baseweb="input"] input {
         color: #ffffff !important;
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
-        padding: 12px !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        padding: 8px 12px !important;
     }
     .stButton>button {
         width: 100%;
@@ -68,9 +67,9 @@ st.markdown("""
         color: white;
         border-radius: 12px;
         border: none;
-        padding: 14px 24px;
+        padding: 12px 24px;
         font-weight: 900;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         box-shadow: 0 0 20px rgba(255, 0, 127, 0.4);
         transition: 0.3s;
         margin-top: 10px;
@@ -157,7 +156,6 @@ st.markdown("""
 st.markdown("<div class='main-title'>👁️ نظام الفحص والتدقيق الذكي لقنوات اليوتيوب</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>فحص شامل للمشتركين، الفيديوهات الطويلة، الشورتس، وكشف تزويد السيرفرات بدقة</div>", unsafe_allow_html=True)
 
-# عنوان واضح وكبير فوق مربع لصق الرابط
 st.markdown("<div class='input-label'>🔗 الصق رابط القناة أو اليوزر نيم (@username) أو اسم القناة هنا:</div>", unsafe_allow_html=True)
 channel_input = st.text_input("رابط القناة", placeholder="مثال: https://www.youtube.com/@ChannelName", label_visibility="collapsed")
 
@@ -305,7 +303,6 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
         progress_bar = st.progress(0)
         start_time = time.time()
 
-        # عرض صندوق الفحص بدون سطر شرح المعادلات (يعمل في الخفاء)
         scanner_placeholder.markdown("""
             <div class='scanner-box'>
                 <div class='eye-icon'>👁️</div>
@@ -351,15 +348,22 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
             stats = channel_data.get("statistics", {})
 
             channel_title = snippet.get("title", "غير متوفر")
-            custom_url = snippet.get("customUrl", "غير متوفر")
+            custom_url = snippet.get("customUrl", "")
             published_at_raw = snippet.get("publishedAt", "")
             published_date = published_at_raw[:10] if published_at_raw else "غير متوفر"
+
+            # بناء رابط القناة الكامل والصحيح تماماً
+            if custom_url:
+                if not custom_url.startswith("@"):
+                    custom_url = "@" + custom_url
+                full_channel_url = f"https://www.youtube.com/{custom_url}"
+            else:
+                full_channel_url = f"https://www.youtube.com/channel/{channel_id}"
 
             subscribers = int(stats.get("subscriberCount", 0))
             total_views = int(stats.get("viewCount", 0))
             total_videos_count = int(stats.get("videoCount", 0))
 
-            # حساب نسبة المشتركين في الخفاء بدون إظهار النسبة المئوية في النتيجة
             if total_views > 0:
                 sub_ratio = (subscribers / total_views) * 100
             else:
@@ -370,7 +374,6 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
             else:
                 sub_status_badge = "<span class='badge-bad'>❌ مرفوضة - تزويد مشتركين سيرفر</span>"
 
-            # حساب نسبة تفاعل الفيديوهات في الخفاء بدون إظهار النسب أو التوضيح
             rejected_videos = []
             qualified_long_videos_count = 0
 
@@ -402,10 +405,13 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
                 </div>
             """, unsafe_allow_html=True)
 
+            # عرض رابط القناة الكامل والصحيح كـ رابط قابل للضغط ومرتب
             st.markdown(f"""
                 <div class='report-card'>
-                    <div class='report-label'>🏷️ اليوزر نيم (Username)</div>
-                    <div class='report-value' style='direction:ltr; text-align:right;'>{custom_url}</div>
+                    <div class='report-label'>🔗 رابط القناة الكامل</div>
+                    <div class='report-value' style='direction:ltr; text-align:right;'>
+                        <a href='{full_channel_url}' target='_blank' style='color: #38bdf8; text-decoration: none;'>{full_channel_url}</a>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
 
