@@ -38,9 +38,29 @@ st.markdown("""
     }
     .sub-title {
         text-align: center;
-        color: #a0aec0;
-        font-size: 1rem;
+        color: #cbd5e1;
+        font-size: 1.05rem;
         margin-bottom: 25px;
+    }
+    .input-label {
+        color: #00ffcc;
+        font-size: 1.3rem;
+        font-weight: 900;
+        margin-bottom: 8px;
+        text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+    }
+    /* توضيح مربع إدخال الرابط */
+    div[data-baseweb="input"] {
+        background-color: #111827 !important;
+        border: 2px solid #00ffcc !important;
+        border-radius: 12px !important;
+        box-shadow: 0 0 12px rgba(0, 255, 204, 0.2) !important;
+    }
+    div[data-baseweb="input"] input {
+        color: #ffffff !important;
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+        padding: 12px !important;
     }
     .stButton>button {
         width: 100%;
@@ -53,6 +73,7 @@ st.markdown("""
         font-size: 1.2rem;
         box-shadow: 0 0 20px rgba(255, 0, 127, 0.4);
         transition: 0.3s;
+        margin-top: 10px;
     }
     .stButton>button:hover {
         box-shadow: 0 0 30px rgba(0, 255, 204, 0.8);
@@ -136,7 +157,9 @@ st.markdown("""
 st.markdown("<div class='main-title'>👁️ نظام الفحص والتدقيق الذكي لقنوات اليوتيوب</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>فحص شامل للمشتركين، الفيديوهات الطويلة، الشورتس، وكشف تزويد السيرفرات بدقة</div>", unsafe_allow_html=True)
 
-channel_input = st.text_input("🔗 ضع رابط القناة أو اليوزر نيم (@username) أو اسم القناة هنا:", placeholder="مثال: https://www.youtube.com/@ChannelName")
+# عنوان واضح وكبير فوق مربع لصق الرابط
+st.markdown("<div class='input-label'>🔗 الصق رابط القناة أو اليوزر نيم (@username) أو اسم القناة هنا:</div>", unsafe_allow_html=True)
+channel_input = st.text_input("رابط القناة", placeholder="مثال: https://www.youtube.com/@ChannelName", label_visibility="collapsed")
 
 
 def yt_get(url, params):
@@ -282,21 +305,12 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
         progress_bar = st.progress(0)
         start_time = time.time()
 
-        scan_steps = [
-            "جاري الاتصال بسيرفرات يوتيوب وسحب بيانات لمحة القناة...",
-            "جاري فحص عدد المشتركين ومقارنته بإجمالي مشاهدات اللمحة...",
-            "جاري استبعاد قسم الشورتس (Shorts) واعتمادها كتزويد حقيقي...",
-            "جاري سحب الفيديوهات الطويلة من قسم الفيديوهات وتطبيق شروط الـ 100 مشاهدة...",
-            "جاري حساب معادلة التفاعل ((الكومنتات × 2) + اللايكات) / المشاهدات...",
-            "جاري تجهيز التقرير النهائي وكشف حالة القناة..."
-        ]
-
-        scanner_placeholder.markdown(f"""
+        # عرض صندوق الفحص بدون سطر شرح المعادلات (يعمل في الخفاء)
+        scanner_placeholder.markdown("""
             <div class='scanner-box'>
                 <div class='eye-icon'>👁️</div>
-                <h3 style='color:#00ffcc; margin-top:15px;'>جاري الفحص العميق للقناة...</h3>
-                <p style='color:#cbd5e1; font-size:1.1rem;'>{scan_steps[0]}</p>
-                <p style='color:#64748b; font-size:0.9rem;'>يرجى الانتظار (يستغرق الفحص الدقيق من 10 إلى 15 ثانية)</p>
+                <h3 style='color:#00ffcc; margin-top:15px;'>جاري الفحص العميق والتدقيق...</h3>
+                <p style='color:#ff007f; font-size:0.95rem;'>يرجى الانتظار لإصدار التقرير النهائي...</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -317,14 +331,12 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
                     break
                 progress_ratio = min(elapsed / target_duration, 0.99)
                 progress_bar.progress(int(progress_ratio * 100))
-                step_index = min(int(progress_ratio * len(scan_steps)), len(scan_steps) - 1)
                 remaining_sec = max(1, int(target_duration - elapsed))
 
                 scanner_placeholder.markdown(f"""
                     <div class='scanner-box'>
                         <div class='eye-icon'>👁️</div>
                         <h3 style='color:#00ffcc; margin-top:15px;'>جاري الفحص العميق والتدقيق... ({int(progress_ratio * 100)}%)</h3>
-                        <p style='color:#ffffff; font-size:1.1rem; font-weight:bold;'>{scan_steps[step_index]}</p>
                         <p style='color:#ff007f; font-size:0.95rem;'>متبقي {remaining_sec} ثانية لإصدار التقرير النهائي...</p>
                     </div>
                 """, unsafe_allow_html=True)
@@ -347,16 +359,18 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
             total_views = int(stats.get("viewCount", 0))
             total_videos_count = int(stats.get("videoCount", 0))
 
+            # حساب نسبة المشتركين في الخفاء بدون إظهار النسبة المئوية في النتيجة
             if total_views > 0:
                 sub_ratio = (subscribers / total_views) * 100
             else:
                 sub_ratio = 0.0 if subscribers == 0 else 100.0
 
             if sub_ratio <= 7.0:
-                sub_status_badge = f"<span class='badge-ok'>✅ مشتركين حقيقيين (حقيقي) | النسبة: {sub_ratio:.2f}%</span>"
+                sub_status_badge = "<span class='badge-ok'>✅ مشتركين حقيقيين (حقيقي)</span>"
             else:
-                sub_status_badge = f"<span class='badge-bad'>❌ مرفوضة - تزويد مشتركين سيرفر | النسبة: {sub_ratio:.2f}%</span>"
+                sub_status_badge = "<span class='badge-bad'>❌ مرفوضة - تزويد مشتركين سيرفر</span>"
 
+            # حساب نسبة تفاعل الفيديوهات في الخفاء بدون إظهار النسب أو التوضيح
             rejected_videos = []
             qualified_long_videos_count = 0
 
@@ -370,25 +384,13 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
                 if eng_rate < 1.0:
                     rejected_videos.append({
                         "title": vid["title"],
-                        "url": vid["url"],
-                        "views": vid["views"],
-                        "likes": vid["likes"],
-                        "comments": vid["comments"],
-                        "rate": eng_rate
+                        "url": vid["url"]
                     })
 
-            if len(long_videos) == 0:
-                videos_status_badge = "<span class='badge-ok'>✅ حقيقي - مشاهدات حقيقية (شورتس / تزويد حقيقي)</span>"
-                videos_extra_note = "لا توجد فيديوهات طويلة في قسم الفيديوهات (جميع فيديوهات الشورتس مقبولة دائماً - تزويد حقيقي)."
-            elif qualified_long_videos_count == 0:
-                videos_status_badge = "<span class='badge-ok'>✅ حقيقي - مشاهدات حقيقية</span>"
-                videos_extra_note = "جميع الفيديوهات الطويلة أقل من 100 مشاهدة (مقبولة وناجحة بدون تطبيق المعادلة) وفيديوهات الشورتس مقبولة دائماً (تزويد حقيقي)."
-            elif len(rejected_videos) == 0:
+            if len(long_videos) == 0 or qualified_long_videos_count == 0 or len(rejected_videos) == 0:
                 videos_status_badge = "<span class='badge-ok'>✅ مشاهدات حقيقية (حقيقي)</span>"
-                videos_extra_note = f"تم فحص الفيديوهات الطويلة ({qualified_long_videos_count} فيديو من 100 مشاهدة فأكثر) وجميعها حققت نسبة تفاعل 1% فيما فوق بنجاح."
             else:
-                videos_status_badge = f"<span class='badge-bad'>❌ تزويد مشاهدات سيرفر (مرفوضة في {len(rejected_videos)} فيديو)</span>"
-                videos_extra_note = "الفيديوهات الطويلة التالية حققت نسبة تفاعل أقل من 1% (بينما الشورتس والفيديوهات الأقل من 100 مشاهدة مقبولة - تزويد حقيقي):"
+                videos_status_badge = "<span class='badge-bad'>❌ تزويد مشاهدات سيرفر</span>"
 
             st.markdown("---")
             st.subheader("📋 التقرير التفصيلي الكامل للقناة:")
@@ -425,10 +427,7 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
                             <div>🎬 <b>{rv['title']}</b></div>
                             <div style='margin-top:4px;'>
                                 🔗 الرابط: <a href='{rv['url']}' target='_blank'>{rv['url']}</a>
-                                <span class='badge-bad'>❌ تزويد مشاهدات سيرفر (التفاعل: {rv['rate']:.2f}%)</span>
-                            </div>
-                            <div style='color:#94a3b8; font-size:0.85rem; margin-top:4px;'>
-                                المشاهدات: {rv['views']:,} | اللايكات: {rv['likes']:,} | الكومنتات: {rv['comments']:,}
+                                <span class='badge-bad'>❌ تزويد مشاهدات سيرفر</span>
                             </div>
                         </div>
                     """
@@ -440,7 +439,6 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
                         {total_videos_count:,} فيديو
                         {videos_status_badge}
                     </div>
-                    <div style='color:#cbd5e1; font-size:0.95rem; margin-top:8px;'>ℹ️ {videos_extra_note}</div>
                     {rejected_html}
                 </div>
             """, unsafe_allow_html=True)
@@ -458,4 +456,3 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
                     <div class='report-value'>{total_views:,} مشاهدة</div>
                 </div>
             """, unsafe_allow_html=True)
-
