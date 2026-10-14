@@ -3,9 +3,7 @@ import requests
 import time
 from urllib.parse import urlparse, unquote
 
-# ==========================================
-# تم ربط مفتاح الـ API الخاص بك مباشرة هنا
-# ==========================================
+# مفتاح الـ API الخاص بك مربوط جاهز
 API_KEYS_LIST = [
     "AIzaSyC-CwysTNGs92t08Bzt6QOJDOgG-StjghY",
     "AIzaSyC-CwysTNGs92t08Bzt6QOJD0gG-StjghY"
@@ -17,7 +15,6 @@ st.set_page_config(
     layout="centered"
 )
 
-# تصميم نيون ودارك مود احترافي مع أنيميشن علامة العين
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
@@ -139,16 +136,18 @@ st.markdown("""
 st.markdown("<div class='main-title'>👁️ نظام الفحص والتدقيق الذكي لقنوات اليوتيوب</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>فحص شامل للمشتركين، الفيديوهات الطويلة، الشورتس، وكشف تزويد السيرفرات بدقة</div>", unsafe_allow_html=True)
 
-channel_input = st.text_input("🔗 ضع رابط القناة أو اليوزر نيم (@username) أو الـ ID هنا:", placeholder="مثال: https://www.youtube.com/@ChannelName")
+channel_input = st.text_input("🔗 ضع رابط القناة أو اليوزر نيم (@username) أو اسم القناة هنا:", placeholder="مثال: https://www.youtube.com/@ChannelName")
 
 
 def yt_get(url, params):
-    """إرسال الطلب باستخدام مفتاح الـ API مع تبديل تلقائي في حال تشابه حرف O و 0"""
     last_res = {}
     for key in API_KEYS_LIST:
         p = dict(params)
         p["key"] = key
-        res = requests.get(url, params=p).json()
+        try:
+            res = requests.get(url, params=p, timeout=15).json()
+        except Exception as e:
+            return {"error": {"message": str(e)}}
         if "error" not in res:
             return res
         last_res = res
@@ -159,7 +158,6 @@ def yt_get(url, params):
 
 
 def resolve_channel(user_input):
-    """استخراج بيانات القناة من أي رابط أو يوزر نيم أو معرف"""
     text = unquote(user_input.strip())
     handle = None
     channel_id = None
@@ -188,30 +186,22 @@ def resolve_channel(user_input):
 
     base_url = "https://www.googleapis.com/youtube/v3/channels"
 
-    # 1. البحث بالـ Channel ID المباشر
     if channel_id:
         r = yt_get(base_url, {"part": "snippet,statistics,contentDetails", "id": channel_id})
-        if "error" in r:
-            return None, r["error"].get("message", "خطأ في مفتاح الـ API")
         if r.get("items"):
             return r["items"][0], None
 
-    # 2. البحث بالـ Handle (@username)
     if handle:
         for h in [handle, handle.lstrip("@")]:
             r = yt_get(base_url, {"part": "snippet,statistics,contentDetails", "forHandle": h})
-            if "error" in r:
-                return None, r["error"].get("message", "خطأ في مفتاح الـ API")
             if r.get("items"):
                 return r["items"][0], None
 
-    # 3. البحث بالـ Username القديم
     if username:
         r = yt_get(base_url, {"part": "snippet,statistics,contentDetails", "forUsername": username})
         if r.get("items"):
             return r["items"][0], None
 
-    # 4. بحث عام احتياطي للوصول للقناة
     q_term = handle or username or text
     search_r = yt_get("https://www.googleapis.com/youtube/v3/search", {
         "part": "snippet",
@@ -220,7 +210,7 @@ def resolve_channel(user_input):
         "maxResults": 1
     })
     if "error" in search_r:
-        return None, search_r["error"].get("message", "خطأ في مفتاح الـ API")
+        return None, search_r["error"].get("message", "خطأ في الاتصال بالـ API")
     if search_r.get("items"):
         found_id = search_r["items"][0]["snippet"]["channelId"]
         r = yt_get(base_url, {"part": "snippet,statistics,contentDetails", "id": found_id})
@@ -231,10 +221,6 @@ def resolve_channel(user_input):
 
 
 def get_long_videos_only(channel_id):
-    """
-    سحب الفيديوهات الطويلة فقط الموجودة في قسم (الفيديوهات) على القناة
-    واستبعاد أي فيديو موجود في قسم (الشورتس Shorts) تماماً
-    """
     uulf_playlist_id = "UULF" + channel_id[2:]
     video_ids = []
     next_page_token = None
@@ -249,8 +235,6 @@ def get_long_videos_only(channel_id):
             params["pageToken"] = next_page_token
 
         res = yt_get("https://www.googleapis.com/youtube/v3/playlistItems", params)
-
-        # إذا لم تكن القائمة موجودة فهذا يعني عدم وجود فيديوهات طويلة في قسم الفيديوهات (كلها شورتس أو فارغة)
         if "error" in res:
             break
 
@@ -294,7 +278,6 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
     if not channel_input.strip():
         st.error("⚠️ من فضلك ضع رابط القناة أو اسمها أولاً!")
     else:
-        # صندوق الفحص الاحترافي بعلامة العين لمدة 12 ثانية (بين 10 إلى 15 ثانية)
         scanner_placeholder = st.empty()
         progress_bar = st.progress(0)
         start_time = time.time()
@@ -316,4 +299,163 @@ if st.button("👁️ ابدأ الفحص الشامل للقناة الآن"):
                 <p style='color:#64748b; font-size:0.9rem;'>يرجى الانتظار (يستغرق الفحص الدقيق من 10 إلى 15 ثانية)</p>
             </div>
         """, unsafe_allow_html=True)
+
+        channel_data, error_msg = resolve_channel(channel_input)
+
+        if error_msg or not channel_data:
+            scanner_placeholder.empty()
+            progress_bar.empty()
+            st.error(f"❌ {error_msg}")
+        else:
+            channel_id = channel_data["id"]
+            long_videos = get_long_videos_only(channel_id)
+
+            target_duration = 12.5
+            while True:
+                elapsed = time.time() - start_time
+                if elapsed >= target_duration:
+                    break
+                progress_ratio = min(elapsed / target_duration, 0.99)
+                progress_bar.progress(int(progress_ratio * 100))
+                step_index = min(int(progress_ratio * len(scan_steps)), len(scan_steps) - 1)
+                remaining_sec = max(1, int(target_duration - elapsed))
+
+                scanner_placeholder.markdown(f"""
+                    <div class='scanner-box'>
+                        <div class='eye-icon'>👁️</div>
+                        <h3 style='color:#00ffcc; margin-top:15px;'>جاري الفحص العميق والتدقيق... ({int(progress_ratio * 100)}%)</h3>
+                        <p style='color:#ffffff; font-size:1.1rem; font-weight:bold;'>{scan_steps[step_index]}</p>
+                        <p style='color:#ff007f; font-size:0.95rem;'>متبقي {remaining_sec} ثانية لإصدار التقرير النهائي...</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                time.sleep(0.4)
+
+            progress_bar.progress(100)
+            time.sleep(0.3)
+            scanner_placeholder.empty()
+            progress_bar.empty()
+
+            snippet = channel_data.get("snippet", {})
+            stats = channel_data.get("statistics", {})
+
+            channel_title = snippet.get("title", "غير متوفر")
+            custom_url = snippet.get("customUrl", "غير متوفر")
+            published_at_raw = snippet.get("publishedAt", "")
+            published_date = published_at_raw[:10] if published_at_raw else "غير متوفر"
+
+            subscribers = int(stats.get("subscriberCount", 0))
+            total_views = int(stats.get("viewCount", 0))
+            total_videos_count = int(stats.get("videoCount", 0))
+
+            if total_views > 0:
+                sub_ratio = (subscribers / total_views) * 100
+            else:
+                sub_ratio = 0.0 if subscribers == 0 else 100.0
+
+            if sub_ratio <= 7.0:
+                sub_status_badge = f"<span class='badge-ok'>✅ مشتركين حقيقيين (حقيقي) | النسبة: {sub_ratio:.2f}%</span>"
+            else:
+                sub_status_badge = f"<span class='badge-bad'>❌ مرفوضة - تزويد مشتركين سيرفر | النسبة: {sub_ratio:.2f}%</span>"
+
+            rejected_videos = []
+            qualified_long_videos_count = 0
+
+            for vid in long_videos:
+                if vid["views"] < 100:
+                    continue
+
+                qualified_long_videos_count += 1
+                eng_rate = (((vid["comments"] * 2) + vid["likes"]) / vid["views"]) * 100
+
+                if eng_rate < 1.0:
+                    rejected_videos.append({
+                        "title": vid["title"],
+                        "url": vid["url"],
+                        "views": vid["views"],
+                        "likes": vid["likes"],
+                        "comments": vid["comments"],
+                        "rate": eng_rate
+                    })
+
+            if len(long_videos) == 0:
+                videos_status_badge = "<span class='badge-ok'>✅ حقيقي - مشاهدات حقيقية (شورتس / تزويد حقيقي)</span>"
+                videos_extra_note = "لا توجد فيديوهات طويلة في قسم الفيديوهات (جميع فيديوهات الشورتس مقبولة دائماً - تزويد حقيقي)."
+            elif qualified_long_videos_count == 0:
+                videos_status_badge = "<span class='badge-ok'>✅ حقيقي - مشاهدات حقيقية</span>"
+                videos_extra_note = "جميع الفيديوهات الطويلة أقل من 100 مشاهدة (مقبولة وناجحة بدون تطبيق المعادلة) وفيديوهات الشورتس مقبولة دائماً (تزويد حقيقي)."
+            elif len(rejected_videos) == 0:
+                videos_status_badge = "<span class='badge-ok'>✅ مشاهدات حقيقية (حقيقي)</span>"
+                videos_extra_note = f"تم فحص الفيديوهات الطويلة ({qualified_long_videos_count} فيديو من 100 مشاهدة فأكثر) وجميعها حققت نسبة تفاعل 1% فيما فوق بنجاح."
+            else:
+                videos_status_badge = f"<span class='badge-bad'>❌ تزويد مشاهدات سيرفر (مرفوضة في {len(rejected_videos)} فيديو)</span>"
+                videos_extra_note = "الفيديوهات الطويلة التالية حققت نسبة تفاعل أقل من 1% (بينما الشورتس والفيديوهات الأقل من 100 مشاهدة مقبولة - تزويد حقيقي):"
+
+            st.markdown("---")
+            st.subheader("📋 التقرير التفصيلي الكامل للقناة:")
+
+            st.markdown(f"""
+                <div class='report-card'>
+                    <div class='report-label'>📺 اسم القناة</div>
+                    <div class='report-value'>{channel_title}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+                <div class='report-card'>
+                    <div class='report-label'>🏷️ اليوزر نيم (Username)</div>
+                    <div class='report-value' style='direction:ltr; text-align:right;'>{custom_url}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+                <div class='report-card'>
+                    <div class='report-label'>👥 عدد المشتركين وحالة الفحص</div>
+                    <div class='report-value'>
+                        {subscribers:,} مشترك
+                        {sub_status_badge}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            rejected_html = ""
+            if rejected_videos:
+                for rv in rejected_videos:
+                    rejected_html += f"""
+                        <div class='bad-video-item'>
+                            <div>🎬 <b>{rv['title']}</b></div>
+                            <div style='margin-top:4px;'>
+                                🔗 الرابط: <a href='{rv['url']}' target='_blank'>{rv['url']}</a>
+                                <span class='badge-bad'>❌ تزويد مشاهدات سيرفر (التفاعل: {rv['rate']:.2f}%)</span>
+                            </div>
+                            <div style='color:#94a3b8; font-size:0.85rem; margin-top:4px;'>
+                                المشاهدات: {rv['views']:,} | اللايكات: {rv['likes']:,} | الكومنتات: {rv['comments']:,}
+                            </div>
+                        </div>
+                    """
+
+            st.markdown(f"""
+                <div class='report-card'>
+                    <div class='report-label'>🎥 عدد الفيديوهات وحالة المشاهدات</div>
+                    <div class='report-value'>
+                        {total_videos_count:,} فيديو
+                        {videos_status_badge}
+                    </div>
+                    <div style='color:#cbd5e1; font-size:0.95rem; margin-top:8px;'>ℹ️ {videos_extra_note}</div>
+                    {rejected_html}
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+                <div class='report-card'>
+                    <div class='report-label'>📅 تاريخ إنشاء القناة</div>
+                    <div class='report-value'>{published_date}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+                <div class='report-card'>
+                    <div class='report-label'>👁️ عدد المشاهدات الإجمالي للقناة (مشاهدات اللمحة)</div>
+                    <div class='report-value'>{total_views:,} مشاهدة</div>
+                </div>
+            """, unsafe_allow_html=True)
 
